@@ -1,0 +1,48 @@
+# --- Core framework ---
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic-settings
+python-dotenv
+
+# --- LLM orchestration ---
+langchain
+langgraph
+langgraph-sdk
+langchain-core
+langchain-community
+langchain-text-splitters
+langchain-google-genai
+langchain-groq
+langchain-openai
+
+# --- Vector store ---
+langchain-chroma
+chromadb
+
+# --- Resume parsing ---
+pypdf
+pdfplumber
+python-docx
+
+# --- GitHub parsing ---
+PyGithub
+gitpython
+
+# --- Voice (STT/TTS) ---
+assemblyai
+elevenlabs
+av
+
+# --- Database & caching ---
+sqlalchemy
+psycopg2-binary
+redis
+
+# --- PDF/report generation ---
+fpdf2
+reportlab
+
+# --- Visualization (LangGraph debugging) ---
+graphviz
+ipython
