@@ -20,14 +20,26 @@ langchain-openai
 langchain-chroma
 chromadb
 
+# --- Embeddings ---
+openai
+
 # --- Resume parsing ---
 pypdf
 pdfplumber
 python-docx
+docx2txt
+
+# --- HTML parsing (LinkedIn scrape) ---
+beautifulsoup4
+lxml
 
 # --- GitHub parsing ---
 PyGithub
 gitpython
+
+# --- URL / Proxy ---
+requests
+requests-ip-rotator          # AWS API Gateway IP rotation (optional)
 
 # --- Voice (STT/TTS) ---
 assemblyai
