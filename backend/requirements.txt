@@ -36,7 +36,6 @@ lxml
 # --- GitHub parsing ---
 PyGithub
 gitpython
-
 # --- URL / Proxy ---
 requests
 requests-ip-rotator          # AWS API Gateway IP rotation (optional)
