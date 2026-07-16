@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.config import get_settings
 from core.logging import get_logger
 from api.routes.ingest import router as ingest_router
+from api.routes.interview import router as interview_router
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -58,6 +59,7 @@ app.add_middleware(
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(ingest_router)
+app.include_router(interview_router)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

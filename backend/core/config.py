@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     AWS_REGION: str = "us-east-1"
     USE_PROXY_ROTATION: bool = False     # set True to enable requests-ip-rotator
 
+    # ── Voice APIs ────────────────────────────────────────────────────────────
+    ELEVENLABS_API_KEY: str = ""
+    ASSEMBLYAI_API_KEY: str = ""
+
 
 @lru_cache()
 def get_settings() -> Settings:
