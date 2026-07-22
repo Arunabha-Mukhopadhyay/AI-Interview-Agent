@@ -27,12 +27,11 @@ async def generate_audio(text: str) -> bytes:
         # Initialize the client
         client = ElevenLabs(api_key=settings.ELEVENLABS_API_KEY)
         
-        # Generate audio using the turbo model (fastest for conversation)
-        # "Rachel" is a good default, clear and professional voice.
-        audio_stream = client.generate(
+        # Generate audio using the turbo model
+        audio_stream = client.text_to_speech.convert(
             text=text,
-            voice="Rachel",
-            model="eleven_turbo_v2_5"
+            voice_id="pNInz6obpgDQGcFmaJgB", # Adam
+            model_id="eleven_turbo_v2_5"
         )
         
         # The API returns a generator, so we join all the chunks into a single byte string

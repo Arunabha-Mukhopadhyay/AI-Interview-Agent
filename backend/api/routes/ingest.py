@@ -110,8 +110,8 @@ def _store_parsed_doc(db: Session, session_id: str, doc_type: str, source: str,
 @router.post("", response_model=IngestResponse, status_code=status.HTTP_200_OK)
 async def ingest(
     resume: UploadFile = File(..., description="Resume file (PDF or DOCX)"),
-    github_url: str = Form(..., description="GitHub profile URL"),
-    linkedin_url: str = Form(..., description="LinkedIn public profile URL"),
+    github_url: Optional[str] = Form(None, description="GitHub profile URL"),
+    linkedin_url: Optional[str] = Form(None, description="LinkedIn public profile URL"),
     jd_text: str = Form(..., description="Job description text (paste it in)"),
     user_email: Optional[str] = Form(None, description="Optional candidate email"),
     db: Session = Depends(get_db),
@@ -127,15 +127,19 @@ async def ingest(
     """
 
     # ── 1. Validate URLs ───────────────────────────────────────────────────────
-    try:
-        clean_github_url = validate_github_url(github_url)
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=f"Invalid GitHub URL: {e}")
+    clean_github_url = None
+    if github_url and github_url.strip():
+        try:
+            clean_github_url = validate_github_url(github_url)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=f"Invalid GitHub URL: {e}")
 
-    try:
-        clean_linkedin_url = validate_linkedin_url(linkedin_url)
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=f"Invalid LinkedIn URL: {e}")
+    clean_linkedin_url = None
+    if linkedin_url and linkedin_url.strip():
+        try:
+            clean_linkedin_url = validate_linkedin_url(linkedin_url)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=f"Invalid LinkedIn URL: {e}")
 
     # ── 2. Create session ──────────────────────────────────────────────────────
     session_id = str(uuid.uuid4())
@@ -202,98 +206,102 @@ async def ingest(
     github_parsed_flag = False
     github_summary: dict = {}
     github_cache_key = make_key("github", session_id)
+    cached_github = None
 
-    cached_github = cache_get(github_cache_key)
-    if cached_github:
-        logger.info("GitHub metadata served from cache for session %s", session_id)
-        github_summary = cached_github
-        github_parsed_flag = True
-    else:
-        try:
-            github_data = parse_github(clean_github_url)
-            github_summary = {k: v for k, v in github_data.items() if k != "raw_text"}
-
-            github_chunk_ids = index_document(
-                github_data["raw_text"],
-                session_id=session_id,
-                doc_type="github",
-                source=clean_github_url,
-            )
-            _store_parsed_doc(
-                db, session_id, "github", clean_github_url,
-                github_data["raw_text"], None, github_chunk_ids,
-            )
-
-            # Persist GitHub metadata row
-            gh_row = GitHubMetadata(
-                session_id=session_id,
-                github_username=github_data.get("username"),
-                profile_url=clean_github_url,
-                bio=github_data.get("bio"),
-                public_repos_count=github_data.get("public_repos_count", 0),
-                followers=github_data.get("followers", 0),
-                following=github_data.get("following", 0),
-                top_languages=github_data.get("top_languages"),
-                pinned_repos=github_data.get("pinned_repos"),
-                top_repos=github_data.get("top_repos"),
-                readme_text=github_data.get("readme_text"),
-            )
-            db.add(gh_row)
-
-            cache_set(github_cache_key, github_summary)
-            session_row.github_parsed = True
+    if clean_github_url:
+        cached_github = cache_get(github_cache_key)
+        if cached_github:
+            logger.info("GitHub metadata served from cache for session %s", session_id)
+            github_summary = cached_github
             github_parsed_flag = True
-            logger.info("GitHub indexed: %d chunks", len(github_chunk_ids))
-        except Exception as e:
-            logger.error("GitHub parsing failed: %s", e)
+        else:
+            try:
+                github_data = parse_github(clean_github_url)
+                github_summary = {k: v for k, v in github_data.items() if k != "raw_text"}
+
+                github_chunk_ids = index_document(
+                    github_data["raw_text"],
+                    session_id=session_id,
+                    doc_type="github",
+                    source=clean_github_url,
+                )
+                _store_parsed_doc(
+                    db, session_id, "github", clean_github_url,
+                    github_data["raw_text"], None, github_chunk_ids,
+                )
+
+                # Persist GitHub metadata row
+                gh_row = GitHubMetadata(
+                    session_id=session_id,
+                    github_username=github_data.get("username"),
+                    profile_url=clean_github_url,
+                    bio=github_data.get("bio"),
+                    public_repos_count=github_data.get("public_repos_count", 0),
+                    followers=github_data.get("followers", 0),
+                    following=github_data.get("following", 0),
+                    top_languages=github_data.get("top_languages"),
+                    pinned_repos=github_data.get("pinned_repos"),
+                    top_repos=github_data.get("top_repos"),
+                    readme_text=github_data.get("readme_text"),
+                )
+                db.add(gh_row)
+
+                cache_set(github_cache_key, github_summary)
+                session_row.github_parsed = True
+                github_parsed_flag = True
+                logger.info("GitHub indexed: %d chunks", len(github_chunk_ids))
+            except Exception as e:
+                logger.error("GitHub parsing failed: %s", e)
 
     # ── 5. Parse LinkedIn ──────────────────────────────────────────────────────
     linkedin_parsed_flag = False
     linkedin_summary: dict = {}
     linkedin_cache_key = make_key("linkedin", session_id)
+    cached_linkedin = None
 
-    cached_linkedin = cache_get(linkedin_cache_key)
-    if cached_linkedin:
-        logger.info("LinkedIn metadata served from cache for session %s", session_id)
-        linkedin_summary = cached_linkedin
-        linkedin_parsed_flag = True
-    else:
-        try:
-            linkedin_data = parse_linkedin(clean_linkedin_url)
-            linkedin_summary = {k: v for k, v in linkedin_data.items()
-                                if k not in ("raw_text", "raw_html_snapshot")}
-
-            linkedin_chunk_ids = index_document(
-                linkedin_data["raw_text"],
-                session_id=session_id,
-                doc_type="linkedin",
-                source=clean_linkedin_url,
-            )
-            _store_parsed_doc(
-                db, session_id, "linkedin", clean_linkedin_url,
-                linkedin_data["raw_text"], None, linkedin_chunk_ids,
-            )
-
-            li_row = LinkedInMetadata(
-                session_id=session_id,
-                linkedin_username=linkedin_data.get("linkedin_username"),
-                profile_url=clean_linkedin_url,
-                headline=linkedin_data.get("headline"),
-                about=linkedin_data.get("about"),
-                location=linkedin_data.get("location"),
-                experience=linkedin_data.get("experience"),
-                education=linkedin_data.get("education"),
-                skills=linkedin_data.get("skills"),
-                certifications=linkedin_data.get("certifications"),
-            )
-            db.add(li_row)
-
-            cache_set(linkedin_cache_key, linkedin_summary)
-            session_row.linkedin_parsed = True
+    if clean_linkedin_url:
+        cached_linkedin = cache_get(linkedin_cache_key)
+        if cached_linkedin:
+            logger.info("LinkedIn metadata served from cache for session %s", session_id)
+            linkedin_summary = cached_linkedin
             linkedin_parsed_flag = True
-            logger.info("LinkedIn indexed: %d chunks", len(linkedin_chunk_ids))
-        except Exception as e:
-            logger.error("LinkedIn parsing failed: %s", e)
+        else:
+            try:
+                linkedin_data = parse_linkedin(clean_linkedin_url)
+                linkedin_summary = {k: v for k, v in linkedin_data.items()
+                                    if k not in ("raw_text", "raw_html_snapshot")}
+
+                linkedin_chunk_ids = index_document(
+                    linkedin_data["raw_text"],
+                    session_id=session_id,
+                    doc_type="linkedin",
+                    source=clean_linkedin_url,
+                )
+                _store_parsed_doc(
+                    db, session_id, "linkedin", clean_linkedin_url,
+                    linkedin_data["raw_text"], None, linkedin_chunk_ids,
+                )
+
+                li_row = LinkedInMetadata(
+                    session_id=session_id,
+                    linkedin_username=linkedin_data.get("linkedin_username"),
+                    profile_url=clean_linkedin_url,
+                    headline=linkedin_data.get("headline"),
+                    about=linkedin_data.get("about"),
+                    location=linkedin_data.get("location"),
+                    experience=linkedin_data.get("experience"),
+                    education=linkedin_data.get("education"),
+                    skills=linkedin_data.get("skills"),
+                    certifications=linkedin_data.get("certifications"),
+                )
+                db.add(li_row)
+
+                cache_set(linkedin_cache_key, linkedin_summary)
+                session_row.linkedin_parsed = True
+                linkedin_parsed_flag = True
+                logger.info("LinkedIn indexed: %d chunks", len(linkedin_chunk_ids))
+            except Exception as e:
+                logger.error("LinkedIn parsing failed: %s", e)
 
     # ── 6. Parse JD ────────────────────────────────────────────────────────────
     jd_parsed_flag = False

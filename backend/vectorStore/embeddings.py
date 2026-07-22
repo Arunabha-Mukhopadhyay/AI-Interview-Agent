@@ -33,10 +33,10 @@ def get_embeddings() -> Embeddings:
         )
 
     elif provider == "groq":
-        # Groq does not offer embeddings; fall back to OpenAI embeddings
-        logger.warning("Groq does not provide embeddings — falling back to OpenAI.")
-        from langchain_openai import OpenAIEmbeddings
-        return OpenAIEmbeddings(model="text-embedding-3-small", api_key=settings.OPENAI_API_KEY)
+        # Groq doesn't provide embeddings. Run FastEmbed locally (no PyTorch dependencies!)
+        logger.info("Using local FastEmbed embeddings for Groq: %s", model)
+        from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+        return FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
     else:
         raise ValueError(f"Unknown LLM_PROVIDER for embeddings: {provider!r}")
