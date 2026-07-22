@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { use, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { Mic, Square, Loader2, Phone } from "lucide-react";
 import { GlassCard } from "@/app/components/ui/GlassCard";
 import { Button } from "@/app/components/ui/Button";
@@ -38,7 +38,7 @@ export default function InterviewRoom({ params }: { params: Promise<{ session_id
   };
 
   // Orb animation states based on agent state
-  const orbVariants = useMemo(() => ({
+  const orbVariants: Variants = useMemo(() => ({
     idle: { scale: 1, opacity: 0.5, boxShadow: "0px 0px 20px rgba(59, 130, 246, 0.2)" },
     listening: { 
       scale: [1, 1.1, 1], 
