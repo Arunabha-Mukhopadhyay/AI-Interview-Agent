@@ -47,8 +47,10 @@ export function useVoiceInterview(sessionId: string) {
       // 2. Initialize Audio Context for playback
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       
-      // 3. Connect WebSocket
-      const wsUrl = `ws://localhost:8000/interview/ws/${sessionId}`;
+      // 3. Connect WebSocket (uses NEXT_PUBLIC_BACKEND_URL for production, localhost for dev)
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "localhost:8000";
+      const wsProtocol = backendUrl.includes("localhost") ? "ws" : "wss";
+      const wsUrl = `${wsProtocol}://${backendUrl}/interview/ws/${sessionId}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 

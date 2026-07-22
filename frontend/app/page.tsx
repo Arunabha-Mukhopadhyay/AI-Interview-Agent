@@ -38,7 +38,9 @@ export default function UploadPage() {
     if (linkedinUrl) formData.append("linkedin_url", linkedinUrl);
 
     try {
-      const response = await fetch("http://localhost:8000/ingest", {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "localhost:8000";
+      const httpProtocol = backendUrl.includes("localhost") ? "http" : "https";
+      const response = await fetch(`${httpProtocol}://${backendUrl}/ingest`, {
         method: "POST",
         body: formData,
       });
